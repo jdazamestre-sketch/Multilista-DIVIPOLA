@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Multilista DIVIPOLA</title>
+
+  <!-- Leaflet desde el CDN (con integrity y crossorigin, como en la guía) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Nuestros archivos estáticos (carpeta static/) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/universal.css') }}">
+</head>
+<body>
+
+  <!-- Panel izquierdo: la multilista (País -> Departamentos -> Municipios) -->
+  <div id="panel">
+    <h2>Colombia</h2>
+    <div id="resumen">{{ total_departamentos }} departamentos · {{ total_municipios }} municipios.
+      Haz clic en un departamento.</div>
+
+    {% for marker in markers %}
+    <div class="dep" id="dep-{{ marker.codigo }}">
+      <div class="dep-nombre" onclick="seleccionarDepartamento('{{ marker.codigo }}')">
+        {{ marker.nombre }} <span>({{ marker.municipios|length }})</span>
+      </div>
+      <ul class="municipios">
+        {% for m in marker.municipios %}
+        <li onclick="seleccionarMunicipio('{{ marker.codigo }}', {{ loop.index0 }})">
+          {{ m.nombre }} <small>{{ m.codigo }}</small>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="map"></div>
+
+  <!-- universal.js crea el mapa (variable "map") -->
+  <script src="{{ url_for('static', filename='js/universal.js') }}"></script>
+
+  <!-- Igual que en la guía: Jinja recorre los markers y escribe un marcador por cada uno -->
+  <script>
+    {% for marker in markers %}
+    L.circleMarker([{{ marker.lat }}, {{ marker.lon }}], { radius: 7, color: "#c0392b", fillOpacity: 0.8 })
+      .addTo(map)
+      .bindPopup({{ marker.popup|tojson }})
+      .on("click", () => seleccionarDepartamento("{{ marker.codigo }}"));
+
+    municipiosPorDep["{{ marker.codigo }}"] = [
+      {% for m in marker.municipios %}
+      { marker: L.marker([{{ m.lat }}, {{ m.lon }}]).bindPopup(
+          "<b>" + {{ m.nombre|tojson }} + "</b><br>" + {{ m.tipo|tojson }} +
+          "<br>Código: {{ m.codigo }}<br>Departamento: " + {{ marker.nombre|tojson }}) },
+      {% endfor %}
+    ];
+    {% endfor %}
+  </script>
+</body>
+</html>
